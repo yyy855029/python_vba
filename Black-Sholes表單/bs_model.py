@@ -16,7 +16,7 @@ plt.rcParams['axes.unicode_minus']=False
 def bs(callput_flag,S,K,T,r,sigma):
     d1=(np.log(S/K)+(r+0.5*sigma**2)*T)/(sigma*np.sqrt(T))
     d2=d1-sigma*np.sqrt(T)
-   
+    
     if callput_flag=='Call':
         symbol=1
     elif callput_flag=='Put':
@@ -33,12 +33,58 @@ def bs(callput_flag,S,K,T,r,sigma):
 
 
 @xloil.func
+def bs_newton_iv(callput_flag,market_price,S,K,T,r,sigma):
+    error=0.00001
+    error_count=0
+
+    sigma_temp=(abs(np.log(S/K)+r*T)*2/T)**0.5
+    f,_,_,_,vega_temp,_=bs(callput_flag,S,K,T,r,sigma_temp)
+
+    while abs(market_price-f)>error and error_count<100:
+        sigma_temp+=(market_price-f)/vega_temp
+        f,_,_,_,vega_temp,_=bs(callput_flag,S,K,T,r,sigma_temp)
+        
+        error_count+=1
+
+    return sigma_temp
+
+
+@xloil.func
+def bs_bisection_iv(callput_flag,market_price,S,K,T,r,sigma):
+    error=0.00001
+    error_count=0
+
+    sigma_L=0.001
+    sigma_H=10
+    
+    fL,_,_,_,_,_=bs(callput_flag,S,K,T,r,sigma_L)
+    fH,_,_,_,_,_=bs(callput_flag,S,K,T,r,sigma_H)
+    sigma_temp=sigma_L+(market_price-fL)*(sigma_H-sigma_L)/(fH-fL)
+    f,_,_,_,_,_=bs(callput_flag,S,K,T,r,sigma_temp)
+
+    while abs(market_price-f)>error and error_count<100:
+        if f<market_price:
+            sigma_L=sigma_temp
+        else:
+            sigma_H=sigma_temp
+        
+        fL,_,_,_,_,_=bs(callput_flag,S,K,T,r,sigma_L)
+        fH,_,_,_,_,_=bs(callput_flag,S,K,T,r,sigma_H)
+        sigma_temp=sigma_L+(market_price-fL)*(sigma_H-sigma_L)/(fH-fL)
+        f,_,_,_,_,_=bs(callput_flag,S,K,T,r,sigma_temp)
+        
+        error_count+=1
+
+    return sigma_temp
+
+
+@xloil.func
 def call_bs():
     wb=xw.Book.caller()
     sht=wb.sheets[0]
     
-    callput_flag=sht.range('C3').value
-    r=sht.range('C7').value
+    callput_flag=sht.range('C4').value
+    r=sht.range('C8').value
     S=np.array(sht.range('B17:B37').value)
     K=np.array(sht.range('C17:C37').value)
     T=np.array(sht.range('D17:D37').value)
@@ -50,6 +96,16 @@ def call_bs():
     sht.range('K17').options(transpose=True).value=theta
     sht.range('L17').options(transpose=True).value=vega
     sht.range('M17').options(transpose=True).value=rho
+
+    market_price=sht.range('M4').value
+    one_S=sht.range('C5').value
+    one_K=sht.range('C6').value
+    one_T=sht.range('C7').value
+    one_sigma=sht.range('C9').value
+    newton_iv=bs_newton_iv(callput_flag,market_price,one_S,one_K,one_T,r,one_sigma)
+    bisection_iv=bs_bisection_iv(callput_flag,market_price,one_S,one_K,one_T,r,one_sigma)
+    sht.range('M5').value=newton_iv
+    sht.range('M6').value=bisection_iv
 
     X_values=sht.range('P17:P37').value
     Y_values=sht.range('Q17:Q37').value
@@ -64,6 +120,8 @@ def call_bs():
 
     sht.pictures.add(fig,name='Plot',update=True,
         left=sht.range('F2').left,top=sht.range('F2').top)
+
+
 
 
 
