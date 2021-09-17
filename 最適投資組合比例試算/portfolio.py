@@ -1,9 +1,11 @@
+#載入所需套件
 import xlwings as xw
 import xloil
 import numpy as np
 from scipy.optimize import minimize
 
 
+#定義函數
 @xloil.func
 def portfolio_mean(weight_array,mean_array):
 	return np.sum(mean_array*weight_array)

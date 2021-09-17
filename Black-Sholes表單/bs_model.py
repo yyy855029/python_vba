@@ -1,3 +1,4 @@
+#載入所需套件
 import xlwings as xw
 import xloil
 import numpy as np
@@ -12,6 +13,7 @@ plt.rcParams['font.sans-serif']=['Microsoft JhengHei']
 plt.rcParams['axes.unicode_minus']=False
 
 
+#定義函數
 @xloil.func
 def bs(callput_flag,S,K,T,r,sigma):
     d1=(np.log(S/K)+(r+0.5*sigma**2)*T)/(sigma*np.sqrt(T))
